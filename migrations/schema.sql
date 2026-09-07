@@ -239,7 +239,10 @@ CREATE TABLE schedule (
     shdl_dtlesend INT NULL,
     shdl_datecc DATETIME NULL,
     shdl_del TINYINT(1) NOT NULL DEFAULT 0,
-    shdl_relocat TINYINT(1) NOT NULL DEFAULT 0
+    shdl_relocat TINYINT(1) NOT NULL DEFAULT 0,
+    INDEX idx_schedule_match (shdl_idcln, shdl_idprp, shdl_idclb, shdl_nameless),
+    INDEX idx_schedule_reconcile (shdl_del, shdl_datecc, shdl_relocat),
+    INDEX idx_schedule_idclb (shdl_idclb)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE shownum (
