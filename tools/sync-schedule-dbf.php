@@ -46,4 +46,10 @@ $db = new Db(
 $service = new ScheduleDbfImportService($db, $log);
 $service->importAll($importDir);
 
+// The ported service only logs errors (matching the original Delphi
+// job, which never logged a success line either) -- this line exists
+// purely so a cron entry is distinguishable from "cron never ran" when
+// every club's file happens to be unchanged since the last run.
+$log->log('shed_dbf', 'Проверка завершена в ' . date('d.m.Y H:i:s'));
+
 echo "Done.\n";
