@@ -39,7 +39,7 @@ return function (TestRunner $t): void {
     $db->execute('INSERT INTO sys_tab (id, tab_name, tab_idkey) VALUES (900001, ?, ?)', ['prepod', 'prp_id']);
     $db->execute(
         'INSERT INTO prepod (prp_id, prp_name, prp_phone, prp_out, prp_pass) VALUES (?, ?, ?, ?, ?)',
-        [900001, 'Test Teacher', '79265990131', 0, '12345']
+        [900001, 'Test Teacher', '79009990001', 0, '12345']
     );
     $db->execute(
         'INSERT INTO Client (cln_id, cln_name, cln_phone) VALUES (?, ?, ?)',
@@ -68,7 +68,7 @@ return function (TestRunner $t): void {
     });
 
     $t->test('getdattab "where" filter is passed through raw', function (TestRunner $t) use ($service): void {
-        $json = $service->getDatTab('prepod', ['where' => "prp_phone='79265990131'"]);
+        $json = $service->getDatTab('prepod', ['where' => "prp_phone='79009990001'"]);
         $rows = json_decode($json, true);
         $t->assertSame('Test Teacher', $rows[0]['prp_name']);
     });
