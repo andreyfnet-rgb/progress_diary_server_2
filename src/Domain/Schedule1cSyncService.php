@@ -65,7 +65,17 @@ final class Schedule1cSyncService
             return;
         }
 
-        $items = json_decode((string) $response, true);
+        $body = (string) $response;
+        if (str_starts_with($body, "\xEF\xBB\xBF")) {
+            // The real 1C server sends a UTF-8 BOM before the '[' -- harmless
+            // for anything that reads text loosely, but json_decode() treats
+            // it as invalid JSON and fails silently (returns null with no
+            // usable error short of json_last_error()). Confirmed against a
+            // real response during first live testing.
+            $body = substr($body, 3);
+        }
+
+        $items = json_decode($body, true);
         if (!is_array($items)) {
             // Mirrors the original's error_in_json.txt: the response body is
             // the single most useful piece of information for diagnosing
@@ -73,7 +83,7 @@ final class Schedule1cSyncService
             // response shape), so it's worth keeping around even though it's
             // not itself parseable JSON.
             $this->log->log('shed_1c', "ERROR GET in STL: response is not a JSON array (HTTP {$httpStatus})");
-            $this->log->log('shed_1c_error_response', substr((string) $response, 0, 4000));
+            $this->log->log('shed_1c_error_response', substr($body, 0, 4000));
             return;
         }
 
