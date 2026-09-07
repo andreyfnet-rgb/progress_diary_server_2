@@ -57,6 +57,7 @@ final class Schedule1cSyncService
         ]);
         $response = curl_exec($ch);
         $error = curl_error($ch);
+        $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         if ($response === false) {
@@ -66,7 +67,13 @@ final class Schedule1cSyncService
 
         $items = json_decode((string) $response, true);
         if (!is_array($items)) {
-            $this->log->log('shed_1c', 'ERROR GET in STL: response is not a JSON array');
+            // Mirrors the original's error_in_json.txt: the response body is
+            // the single most useful piece of information for diagnosing
+            // this (wrong credentials, an HTML error page, an unexpected 1C
+            // response shape), so it's worth keeping around even though it's
+            // not itself parseable JSON.
+            $this->log->log('shed_1c', "ERROR GET in STL: response is not a JSON array (HTTP {$httpStatus})");
+            $this->log->log('shed_1c_error_response', substr((string) $response, 0, 4000));
             return;
         }
 
