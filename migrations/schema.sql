@@ -264,17 +264,23 @@ CREATE TABLE trenertype (
 -- dropped -- the JOIN structure and column list are unchanged)
 -- ---------------------------------------------------------------------
 
+-- NOTE: the original Access SQL mixed alias casing (e.g. "P" and "p" for
+-- the same table) -- harmless in Access/Jet, which matches aliases
+-- case-insensitively, but MySQL on Linux (lower_case_table_names=0, the
+-- default) treats them as distinct and errors with "Unknown column".
+-- Normalized to consistent casing per alias below; the JOIN structure and
+-- column list are otherwise unchanged from the dumped original.
 CREATE VIEW calend AS
-SELECT p.prgs_id, P.prgs_date_create, P.prgs_level, P.prgs_status, P.prgs_recom, PRP.prp_name, LT.it_name, DNS.dns_name, dns.dns_color, F.fgr_name, LO.lo_name, LW.lw_name, cln.cln_phone
-FROM ((((((progress AS P LEFT JOIN prepod AS PRP ON PRP.prp_id = P.prgs_idprp) LEFT JOIN LessType AS LT ON LT.lt_id = P.prgs_idlt) LEFT JOIN LessWrk AS LW ON LW.lw_id = P.prgs_idLesWrk) LEFT JOIN LessObj AS LO ON LO.lo_id = P.prgs_idLesObj) LEFT JOIN figura AS F ON F.fgr_id = p.prgs_idfigur) LEFT JOIN dance AS DNS ON DNS.dns_id = p.prgs_iddns) LEFT JOIN Client AS CLN ON CLN.cln_id = p.prgs_idcln;
+SELECT P.prgs_id, P.prgs_date_create, P.prgs_level, P.prgs_status, P.prgs_recom, PRP.prp_name, LT.it_name, DNS.dns_name, DNS.dns_color, F.fgr_name, LO.lo_name, LW.lw_name, CLN.cln_phone
+FROM ((((((progress AS P LEFT JOIN prepod AS PRP ON PRP.prp_id = P.prgs_idprp) LEFT JOIN LessType AS LT ON LT.lt_id = P.prgs_idlt) LEFT JOIN LessWrk AS LW ON LW.lw_id = P.prgs_idLesWrk) LEFT JOIN LessObj AS LO ON LO.lo_id = P.prgs_idLesObj) LEFT JOIN figura AS F ON F.fgr_id = P.prgs_idfigur) LEFT JOIN dance AS DNS ON DNS.dns_id = P.prgs_iddns) LEFT JOIN Client AS CLN ON CLN.cln_id = P.prgs_idcln;
 
 CREATE VIEW Calend_v2 AS
 SELECT DP_blok1_less.pb1_date, DP_blok1_less.pb1_datles, DP_blok1_less.pb1_aboutless, LessType.it_name, DP_blok1_less.pb1_idd, dancetype.dt_name, prepod.prp_name, dancetype.dt_color, DP_blok1_less.pb1_recom, Client.cln_name, Client.cln_phone, prepod.prp_phone, prepod.prp_link
 FROM (Client INNER JOIN (prepod INNER JOIN (LessType INNER JOIN DP_blok1_less ON LessType.lt_id = DP_blok1_less.pb1_idlt) ON prepod.prp_id = DP_blok1_less.pb1_idprp) ON Client.cln_id = DP_blok1_less.pb1_idcln) INNER JOIN dancetype ON DP_blok1_less.pb1_iddt = dancetype.dt_id;
 
 CREATE VIEW Figurles AS
-SELECT f.*, client.cln_phone
-FROM (SELECT frg.*, DP_blok2_figur.pb2_daton, DP_blok2_figur.pb2_datoff, DP_blok2_figur.pb2_idcln FROM (SELECT figura.*, lvl.lvl_name, dance.*, dancetype.* FROM ((figura LEFT JOIN lvl ON figura.fgr_level=lvl.lvl_id) LEFT JOIN dance ON figura.fgr_iddance=dance.dns_id) LEFT JOIN dancetype ON dancetype.dt_id = dance.id_dt) AS frg LEFT JOIN DP_blok2_figur ON frg.fgr_id = DP_blok2_figur.pb2_idfigur) AS f LEFT JOIN client ON f.pb2_idcln = client.cln_id
+SELECT f.*, Client.cln_phone
+FROM (SELECT frg.*, DP_blok2_figur.pb2_daton, DP_blok2_figur.pb2_datoff, DP_blok2_figur.pb2_idcln FROM (SELECT figura.*, lvl.lvl_name, dance.*, dancetype.* FROM ((figura LEFT JOIN lvl ON figura.fgr_level=lvl.lvl_id) LEFT JOIN dance ON figura.fgr_iddance=dance.dns_id) LEFT JOIN dancetype ON dancetype.dt_id = dance.id_dt) AS frg LEFT JOIN DP_blok2_figur ON frg.fgr_id = DP_blok2_figur.pb2_idfigur) AS f LEFT JOIN Client ON f.pb2_idcln = Client.cln_id
 -- Original Access SQL qualified this as "frg.dt_name, frg.fgr_level,
 -- frg.fgr_id" -- Jet tolerates reaching two subquery levels down since f.*
 -- already re-exposes those columns unqualified; MySQL requires referencing
@@ -292,7 +298,7 @@ FROM ((purpose INNER JOIN smssendlog ON purpose.clpp_id = smssendlog.ssl_idclpp)
 
 CREATE VIEW purpose_all AS
 SELECT p.clpp_id, p.clpp_dateon, p.clpp_dateoff, p.clpp_dateplan, p.clpp_purpose, p.clpp_info, c.cln_name, c.cln_id, pr.prp_name AS prp_off, pr2.prp_name AS prp_on, c.cln_phone
-FROM ((purpose AS p LEFT JOIN client AS c ON p.clpp_idcln = c.cln_id) LEFT JOIN prepod AS pr ON p.clpp_idprp_off = pr.prp_id) LEFT JOIN prepod AS pr2 ON p.clpp_idprp_on = pr2.prp_id;
+FROM ((purpose AS p LEFT JOIN Client AS c ON p.clpp_idcln = c.cln_id) LEFT JOIN prepod AS pr ON p.clpp_idprp_off = pr.prp_id) LEFT JOIN prepod AS pr2 ON p.clpp_idprp_on = pr2.prp_id;
 
 CREATE VIEW shed AS
 SELECT Client.cln_name, Client.cln_phone, prepod.prp_id, Client.cln_idfox, prepod.prp_name, prepod.prp_phone, clubs.clb_name, schedule.shdl_dtleson, schedule.shdl_dtlesoff, schedule.shdl_datecc, schedule.shdl_nameless, schedule.shdl_nameroom, schedule.shdl_idcln, schedule.shdl_idprp, schedule.shdl_dtlesend, schedule.shdl_del
