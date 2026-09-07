@@ -33,10 +33,15 @@ return function (TestRunner $t): void {
     $db->execute('DELETE FROM prepod WHERE prp_id IN (900001, 900002)');
     $db->execute('DELETE FROM Client WHERE cln_id = 900001');
     // put_dattab's update path looks up the table's key column via
-    // sys_tab.tab_idkey, exactly like the legacy server -- needs a real
-    // entry to exercise that path in this test.
-    $db->execute('DELETE FROM sys_tab WHERE tab_name = ?', ['prepod']);
-    $db->execute('INSERT INTO sys_tab (id, tab_name, tab_idkey) VALUES (900001, ?, ?)', ['prepod', 'prp_id']);
+    // sys_tab.tab_idkey, exactly like the legacy server. This row is meant
+    // to permanently exist (see migrations/004_sys_tab_missing_entries.sql
+    // -- the real migrated Access data was missing it entirely, which
+    // silently broke every id-based update to `prepod`, including
+    // GDPD_admin's teacher-deactivate button), so this only adds it if
+    // some environment hasn't run that migration yet, and never deletes it.
+    if (count($db->query('SELECT id FROM sys_tab WHERE tab_name = ?', ['prepod'])) === 0) {
+        $db->execute('INSERT INTO sys_tab (tab_name, tab_idkey) VALUES (?, ?)', ['prepod', 'prp_id']);
+    }
     $db->execute(
         'INSERT INTO prepod (prp_id, prp_name, prp_phone, prp_out, prp_pass) VALUES (?, ?, ?, ?, ?)',
         [900001, 'Test Teacher', '79009990001', 0, '12345']
@@ -103,6 +108,25 @@ return function (TestRunner $t): void {
         $t->assertSame('Renamed Teacher', $rows[0]['prp_name'] ?? null);
     });
 
+    $t->test('putdattab converts "true"/"false" strings for a boolean column', function (TestRunner $t) use ($db, $service): void {
+        // Real clients (GDPD_admin's "deactivate teacher" button) send
+        // exactly this shape: {"id": ..., "prp_out": "true"}. MySQL's
+        // TINYINT(1) columns reject the literal word "true" outright under
+        // strict SQL mode -- confirmed via a real API call that returned
+        // "ok" but left the column unchanged.
+        $result = $service->putDatTab('prepod', [
+            ['id' => 900001, 'prp_out' => 'true'],
+        ]);
+        $t->assertSame('ok', $result);
+
+        $rows = $db->query('SELECT prp_out FROM prepod WHERE prp_id = 900001');
+        $t->assertSame(1, (int) $rows[0]['prp_out']);
+
+        $service->putDatTab('prepod', [['id' => 900001, 'prp_out' => 'false']]);
+        $rows = $db->query('SELECT prp_out FROM prepod WHERE prp_id = 900001');
+        $t->assertSame(0, (int) $rows[0]['prp_out']);
+    });
+
     $t->test('putdattab returns "ok" even when a row in the batch fails (legacy contract)', function (TestRunner $t) use ($service): void {
         $result = $service->putDatTab('prepod', [
             ['prp_id' => 900002, 'prp_name' => 'Duplicate primary key, should fail'], // prp_id 900002 already exists
@@ -113,5 +137,6 @@ return function (TestRunner $t): void {
     // --- cleanup ----------------------------------------------------
     $db->execute('DELETE FROM prepod WHERE prp_id IN (900001, 900002)');
     $db->execute('DELETE FROM Client WHERE cln_id = 900001');
-    $db->execute('DELETE FROM sys_tab WHERE tab_name = ?', ['prepod']);
+    // sys_tab's prepod row is left in place -- it's real, permanent schema
+    // data, not a test fixture (see the setup comment above).
 };

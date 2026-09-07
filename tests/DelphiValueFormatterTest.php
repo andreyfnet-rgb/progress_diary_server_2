@@ -33,6 +33,16 @@ return function (TestRunner $t): void {
         $t->assertSame('True', DelphiValueFormatter::formatValue(1, true, false));
     });
 
+    $t->test('parseBooleanInput accepts the "True"/"False" shape formatValue produces, case-insensitively', function (TestRunner $t): void {
+        $t->assertSame('1', DelphiValueFormatter::parseBooleanInput('true'));
+        $t->assertSame('1', DelphiValueFormatter::parseBooleanInput('True'));
+        $t->assertSame('0', DelphiValueFormatter::parseBooleanInput('false'));
+        $t->assertSame('0', DelphiValueFormatter::parseBooleanInput('False'));
+        $t->assertSame('0', DelphiValueFormatter::parseBooleanInput(''));
+        $t->assertSame('1', DelphiValueFormatter::parseBooleanInput('1'));
+        $t->assertSame('0', DelphiValueFormatter::parseBooleanInput('0'));
+    });
+
     $t->test('null renders as empty string', function (TestRunner $t): void {
         $t->assertSame('', DelphiValueFormatter::formatValue(null, false, false));
     });

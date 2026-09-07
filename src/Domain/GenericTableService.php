@@ -186,16 +186,22 @@ final class GenericTableService
 
     /**
      * Converts a request value to what actually gets bound to the SQL
-     * parameter: for a column SchemaGuard reports as a date/datetime type,
-     * parses the "dd.MM.yyyy[ H:mm:ss]" shape clients actually send (the
-     * same shape this API's read side produces) into MySQL's format;
-     * everything else passes through JsonValue::toString unchanged.
+     * parameter: for a date/datetime column, parses the "dd.MM.yyyy[
+     * H:mm:ss]" shape clients actually send (the same shape this API's
+     * read side produces) into MySQL's format; for a boolean (TINYINT(1))
+     * column, converts the "True"/"False" strings clients send into
+     * "1"/"0" (MySQL's strict SQL mode otherwise rejects the literal word
+     * outright, rather than coercing it); everything else passes through
+     * JsonValue::toString unchanged.
      */
     private function bindValue(string $resolvedTable, string $resolvedColumn, mixed $valueNode): ?string
     {
         $value = JsonValue::toString($valueNode);
         if ($this->schema->isDateColumn($resolvedTable, $resolvedColumn)) {
             return DelphiValueFormatter::parseDateTimeInput($value);
+        }
+        if ($this->schema->isBooleanColumn($resolvedTable, $resolvedColumn)) {
+            return DelphiValueFormatter::parseBooleanInput($value);
         }
 
         return $value;

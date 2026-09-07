@@ -127,6 +127,29 @@ final class DelphiValueFormatter
     }
 
     /**
+     * The write-side counterpart of the "True"/"False" boolean rendering:
+     * clients send exactly that shape back (e.g. GDPD_admin's
+     * `jo.AddPair('prp_out', 'true')`), which MySQL's TINYINT(1) columns
+     * reject outright under the default strict SQL mode ("Incorrect
+     * integer value: 'true'") rather than silently coercing it -- caught
+     * via a real putdattab call that returned "ok" but never actually
+     * flipped the column. Case-insensitive to also accept the capitalized
+     * form this same class produces on read.
+     */
+    public static function parseBooleanInput(string $value): string
+    {
+        $normalized = strtolower(trim($value));
+        if ($normalized === 'false' || $normalized === '') {
+            return '0';
+        }
+        if ($normalized === 'true') {
+            return '1';
+        }
+
+        return ((float) $value) !== 0.0 ? '1' : '0';
+    }
+
+    /**
      * Mirrors Delphi's FloatToStr/CurrToStr "general" formatting: variable
      * precision, no trailing zeros, ',' as the decimal separator (ru-RU
      * locale).
