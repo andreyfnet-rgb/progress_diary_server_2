@@ -14,6 +14,17 @@
 -- the ADOX dump), so none are added here either -- keeps the one-time data
 -- import order-independent. Nullability follows the ADOX-reported
 -- Attributes flag (adColNullable) as observed.
+--
+-- Column ORDER matters here and is NOT taken from the ADOX dump: ADOX's
+-- Columns collection enumerates alphabetically, which does not match the
+-- physical column order a plain `SELECT * FROM table` returns (confirmed
+-- by comparing this server's /prepod output against the live production
+-- server on real data -- same values, different key order). The generic
+-- endpoints (getdattab, get_prep, etc.) build their JSON by iterating
+-- information_schema.COLUMNS in ORDINAL_POSITION order, i.e. the order
+-- columns are declared in below, so that order was re-derived from a real
+-- `SELECT * FROM <table>` against the source .mdb (SchemaOnly OleDb
+-- reader, not ADOX) and used for every CREATE TABLE below.
 
 SET NAMES utf8mb4;
 
@@ -23,64 +34,64 @@ SET NAMES utf8mb4;
 
 CREATE TABLE Client (
     cln_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    cln_idfox VARCHAR(255) NULL,
-    cln_info VARCHAR(255) NULL,
-    cln_lvl VARCHAR(255) NULL,
     cln_name VARCHAR(255) NULL,
-    cln_phone VARCHAR(255) NULL
+    cln_idfox VARCHAR(255) NULL,
+    cln_phone VARCHAR(255) NULL,
+    cln_lvl VARCHAR(255) NULL,
+    cln_info VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE clubs (
     clb_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    clb_id1c VARCHAR(255) NULL,
-    clb_in1с TINYINT(1) NOT NULL DEFAULT 0,
-    clb_indbf TINYINT(1) NOT NULL DEFAULT 0,
-    clb_info VARCHAR(255) NULL,
     clb_name VARCHAR(255) NULL,
-    clb_pass VARCHAR(255) NULL,
+    clb_info VARCHAR(255) NULL,
     clb_patchindb VARCHAR(255) NULL,
-    clb_timeindb DATETIME NULL
+    clb_pass VARCHAR(255) NULL,
+    clb_timeindb DATETIME NULL,
+    clb_id1c VARCHAR(255) NULL,
+    clb_indbf TINYINT(1) NOT NULL DEFAULT 0,
+    clb_in1с TINYINT(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE dance (
     dns_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    dns_color VARCHAR(255) NULL,
     dns_name VARCHAR(255) NULL,
-    id_dt INT NULL
+    id_dt INT NULL,
+    dns_color VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE dancetype (
     dt_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    dt_color VARCHAR(255) NULL,
-    dt_name VARCHAR(255) NULL
+    dt_name VARCHAR(255) NULL,
+    dt_color VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE DP_blok1_less (
     pb1_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    pb1_idprp INT NULL,
+    pb1_idcln INT NULL,
+    pb1_idlt INT NULL,
     pb1_aboutless TEXT NULL,
+    pb1_recom VARCHAR(255) NULL,
+    pb1_plan VARCHAR(255) NULL,
     pb1_date DATETIME NULL,
     pb1_datles DATETIME NULL,
-    pb1_idcln INT NULL,
-    pb1_idd VARCHAR(255) NULL,
+    pb1_status VARCHAR(255) NULL,
     pb1_iddt INT NULL,
-    pb1_idlt INT NULL,
-    pb1_idprp INT NULL,
     pb1_idsn INT NULL,
     pb1_idwrk INT NULL,
     pb1_info TEXT NULL,
-    pb1_plan VARCHAR(255) NULL,
-    pb1_recom VARCHAR(255) NULL,
-    pb1_status VARCHAR(255) NULL
+    pb1_idd VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE DP_blok2_figur (
     pb2_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    pb2_datoff DATETIME NULL,
-    pb2_daton DATETIME NULL,
-    pb2_idcln INT NULL,
     pb2_idfigur INT NULL,
+    pb2_daton DATETIME NULL,
+    pb2_idprpon INT NULL,
+    pb2_datoff DATETIME NULL,
     pb2_idprpoff INT NULL,
-    pb2_idprpon INT NULL
+    pb2_idcln INT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE exclude_1c (
@@ -93,57 +104,57 @@ CREATE TABLE exclude_1c (
 
 CREATE TABLE figura (
     fgr_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    fgr_iddance INT NULL,
+    fgr_name VARCHAR(255) NULL,
     fgr_info VARCHAR(255) NULL,
     fgr_level INT NULL,
-    fgr_name VARCHAR(255) NULL
+    fgr_iddance INT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- html_* tables back the legacy mini-CMS ("/admindp" page). Not used by
 -- Phase 1's priority endpoints; ported for completeness/schema parity only.
 CREATE TABLE html_blok (
     blk_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    blk_body TEXT NULL,
-    blk_form TEXT NULL,
     blk_info TEXT NULL,
+    blk_body TEXT NULL,
     blk_SQL TEXT NULL,
     blk_tab TEXT NULL,
     blk_tabrow1 VARCHAR(255) NULL,
     blk_tabrow2 VARCHAR(255) NULL,
-    blk_tabtit VARCHAR(255) NULL
+    blk_tabtit VARCHAR(255) NULL,
+    blk_form TEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE html_blokin (
     bdi_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    bdi_id_page INT NULL,
     bdi_idblock INT NULL,
-    bdi_info TEXT NULL,
-    bdi_num INT NULL
+    bdi_num INT NULL,
+    bdi_id_page INT NULL,
+    bdi_info TEXT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE html_page (
     pg_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    pg_id_body INT NULL,
+    pg_name VARCHAR(255) NULL,
     pg_id_head TEXT NULL,
     pg_id_script INT NULL,
     pg_id_style INT NULL,
-    pg_name VARCHAR(255) NULL
+    pg_id_body INT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE html_tabcell (
     tab_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    tab_htmltag VARCHAR(255) NULL,
     tab_id_blk INT NULL,
-    tab_namedb VARCHAR(255) NULL,
     tab_nametitle VARCHAR(255) NULL,
-    tab_num VARCHAR(255) NULL
+    tab_namedb VARCHAR(255) NULL,
+    tab_num VARCHAR(255) NULL,
+    tab_htmltag VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE LessObj (
     lo_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    lo_name VARCHAR(255) NULL,
     lo_idlt INT NULL,
-    lo_info VARCHAR(255) NULL,
-    lo_name VARCHAR(255) NULL
+    lo_info VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE LessType (
@@ -153,109 +164,109 @@ CREATE TABLE LessType (
 
 CREATE TABLE LessWrk (
     lw_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    lw_name VARCHAR(255) NULL,
     lw_idlt INT NULL,
-    lw_info VARCHAR(255) NULL,
-    lw_name VARCHAR(255) NULL
+    lw_info VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE lvl (
     lvl_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    lvl_info VARCHAR(255) NULL,
-    lvl_name VARCHAR(255) NULL
+    lvl_name VARCHAR(255) NULL,
+    lvl_info VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE muscul (
     mscl_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    mscl_info VARCHAR(255) NULL,
-    mscl_name VARCHAR(255) NULL
+    mscl_name VARCHAR(255) NULL,
+    mscl_info VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE practik (
     prkt_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    prkt_info VARCHAR(255) NULL,
-    prkt_name VARCHAR(255) NULL
+    prkt_name VARCHAR(255) NULL,
+    prkt_info VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE prepod (
     prp_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    prp_idfox VARCHAR(255) NULL,
-    prp_info VARCHAR(255) NULL,
-    prp_link VARCHAR(255) NULL,
     prp_name VARCHAR(255) NULL,
-    prp_out TINYINT(1) NOT NULL DEFAULT 0,
+    prp_idfox VARCHAR(255) NULL,
+    prp_phone VARCHAR(255) NULL,
+    prp_info VARCHAR(255) NULL,
     prp_pass VARCHAR(255) NULL,
-    prp_phone VARCHAR(255) NULL
+    prp_out TINYINT(1) NOT NULL DEFAULT 0,
+    prp_link VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE progress (
     prgs_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    prgs_date_cheng DATETIME NULL,
-    prgs_date_create DATETIME NULL,
-    prgs_idcln INT NULL,
-    prgs_iddns INT NULL,
-    prgs_idfigur INT NULL,
-    prgs_idLesObj INT NULL,
-    prgs_idLesWrk INT NULL,
     prgs_idlt INT NULL,
     prgs_idprp INT NULL,
+    prgs_idcln INT NULL,
+    prgs_iddns INT NULL,
     prgs_level VARCHAR(255) NULL,
-    prgs_plannext VARCHAR(255) NULL,
+    prgs_idfigur INT NULL,
+    prgs_status VARCHAR(255) NULL,
+    prgs_date_create DATETIME NULL,
+    prgs_date_cheng DATETIME NULL,
     prgs_recom VARCHAR(255) NULL,
-    prgs_status VARCHAR(255) NULL
+    prgs_idLesObj INT NULL,
+    prgs_idLesWrk INT NULL,
+    prgs_plannext VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE purpose (
     clpp_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    clpp_dateoff DATETIME NULL,
-    clpp_dateon DATETIME NULL,
-    clpp_dateplan DATETIME NULL,
     clpp_idcln INT NULL,
-    clpp_idprp_off INT NULL,
     clpp_idprp_on INT NULL,
-    clpp_info VARCHAR(255) NULL,
-    clpp_purpose VARCHAR(255) NULL
+    clpp_idprp_off INT NULL,
+    clpp_dateon DATETIME NULL,
+    clpp_dateoff DATETIME NULL,
+    clpp_dateplan DATETIME NULL,
+    clpp_purpose VARCHAR(255) NULL,
+    clpp_info VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE schedule (
     shdl_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    shdl_datecc DATETIME NULL,
-    shdl_del TINYINT(1) NOT NULL DEFAULT 0,
-    shdl_dtlesend INT NULL,
-    shdl_dtlesoff DATETIME NULL,
-    shdl_dtleson DATETIME NULL,
-    shdl_idclb INT NULL,
     shdl_idcln INT NULL,
-    shdl_idprp INT NULL,
+    shdl_dtleson DATETIME NULL,
+    shdl_dtlesoff DATETIME NULL,
+    shdl_idclb INT NULL,
     shdl_nameless VARCHAR(255) NULL,
     shdl_nameroom VARCHAR(255) NULL,
+    shdl_idprp INT NULL,
+    shdl_dtlesend INT NULL,
+    shdl_datecc DATETIME NULL,
+    shdl_del TINYINT(1) NOT NULL DEFAULT 0,
     shdl_relocat TINYINT(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE shownum (
     shw_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    show_info VARCHAR(255) NULL,
+    shw_name VARCHAR(255) NULL,
     show_num VARCHAR(255) NULL,
-    shw_name VARCHAR(255) NULL
+    show_info VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE smssendlog (
     ssl_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    ssl_2d TINYINT(1) NOT NULL DEFAULT 0,
     ssl_date DATETIME NULL,
+    ssl_text VARCHAR(255) NULL,
     ssl_idclpp INT NULL,
-    ssl_text VARCHAR(255) NULL
+    ssl_2d TINYINT(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE sys_tab (
     id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    tab_idkey VARCHAR(255) NULL,
-    tab_name VARCHAR(255) NULL
+    tab_name VARCHAR(255) NULL,
+    tab_idkey VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE trenertype (
     trt_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    trt_info VARCHAR(255) NULL,
-    trt_name VARCHAR(255) NULL
+    trt_name VARCHAR(255) NULL,
+    trt_info VARCHAR(255) NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ---------------------------------------------------------------------
