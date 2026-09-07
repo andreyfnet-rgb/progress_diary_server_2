@@ -4,3 +4,4 @@
 /log/*
 !/log/.htaccess
 *.log
+/import_dbf/
