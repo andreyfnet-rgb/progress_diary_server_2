@@ -39,8 +39,21 @@ final class CalendService
             // exactly on Linux MySQL (lower_case_table_names=0, the
             // default) -- confirmed against production: the view is
             // actually named "Calend_v2", not "calend_v2".
+            //
+            // The legacy query has no ORDER BY at all, so its row order
+            // was never a defined contract -- confirmed empirically
+            // against real data that Access's actual output order for
+            // this query matches neither pb1_id nor pb1_date nor
+            // pb1_datles order, just whatever Jet's query plan and years
+            // of physical storage churn happened to produce (not
+            // reproducible, and not guaranteed to be stable even on the
+            // original system). Rather than leave MySQL's own arbitrary
+            // order, this adds an explicit ORDER BY pb1_date (the
+            // record's creation timestamp, part of Calend_v2's own
+            // column list) so the feed is at least deterministic and
+            // reads in a sensible (creation-order) sequence.
             $rows = $this->db->query(
-                'SELECT * FROM Calend_v2 WHERE cln_phone = ?',
+                'SELECT * FROM Calend_v2 WHERE cln_phone = ? ORDER BY pb1_date',
                 [JsonValue::toString($filter['cln_phone'])]
             );
 
