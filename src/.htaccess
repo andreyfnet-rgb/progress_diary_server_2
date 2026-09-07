@@ -1,0 +1,10 @@
+# Defense in depth alongside the root .htaccess rewrite-deny rules: block
+# this directory outright even if RewriteRule doesn't apply here for some
+# reason (e.g. AllowOverride scope on this host).
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+</IfModule>

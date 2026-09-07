@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require __DIR__ . '/../src/autoload.php';
+require __DIR__ . '/src/autoload.php';
 
 use Gdpd\Api\Dispatcher;
 use Gdpd\Api\Routes;
@@ -22,7 +22,7 @@ use Gdpd\Infrastructure\Config;
 use Gdpd\Infrastructure\Logger;
 use Gdpd\Infrastructure\SmsGateway;
 
-$projectRoot = dirname(__DIR__);
+$projectRoot = __DIR__;
 $config = new Config($projectRoot . '/config.ini');
 $log = new Logger($projectRoot);
 

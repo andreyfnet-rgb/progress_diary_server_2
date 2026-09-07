@@ -1,0 +1,24 @@
+# This app is deployed as a flat repo checkout directly into the
+# hosting's document root (public_html or similar) -- there is no
+# separate "public/" subfolder the host serves from. That means these
+# rules are the ONLY thing keeping application code and secrets
+# (src/, migrations/, tests/, tools/, log/, config.ini) from being served
+# or executed as plain files by Apache. Keep this file in sync with the
+# project layout if directories are added/renamed.
+
+RewriteEngine On
+
+# Non-public application directories: forbidden outright.
+RewriteRule ^(src|migrations|tests|tools|log)(/|$) - [F,L]
+
+# Config files (config.ini holds real DB/API credentials) and VCS metadata.
+RewriteRule ^config(\.example)?\.ini$ - [F,L]
+RewriteRule ^\.git(/|$) - [F,L]
+RewriteRule ^\.gitignore$ - [F,L]
+
+# Everything else that isn't a real file/directory goes through the front
+# controller (matches every legacy API route name, e.g. /getdattab,
+# /prepod, ...).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
