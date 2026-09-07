@@ -34,8 +34,12 @@ final class CalendService
                 return 'ERROR: Invalid parameter';
             }
 
+            // Table/view names must match the real CREATE-time casing
+            // exactly on Linux MySQL (lower_case_table_names=0, the
+            // default) -- confirmed against production: the view is
+            // actually named "Calend_v2", not "calend_v2".
             $rows = $this->db->query(
-                'SELECT * FROM calend_v2 WHERE cln_phone = ?',
+                'SELECT * FROM Calend_v2 WHERE cln_phone = ?',
                 [JsonValue::toString($filter['cln_phone'])]
             );
 

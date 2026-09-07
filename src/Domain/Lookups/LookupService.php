@@ -67,7 +67,13 @@ final class LookupService
 
     public function getLessType(?array $filter): string
     {
-        return $this->getById('lesstype', $filter, 'lt_id', 'ERROR_getTypeLess');
+        // Table names must match the real CREATE TABLE casing exactly on
+        // Linux MySQL (lower_case_table_names=0, the default) -- confirmed
+        // the hard way: 'lesstype' here worked fine against this project's
+        // Windows dev MySQL (case-insensitive) but 404'd as "table doesn't
+        // exist" against the real Linux-hosted production database, where
+        // the table is actually named "LessType".
+        return $this->getById('LessType', $filter, 'lt_id', 'ERROR_getTypeLess');
     }
 
     public function getFigura(?array $filter): string
@@ -77,12 +83,12 @@ final class LookupService
 
     public function getLessObj(?array $filter): string
     {
-        return $this->getById('lessobj', $filter, 'lo_id', 'ERROR_getLessobj');
+        return $this->getById('LessObj', $filter, 'lo_id', 'ERROR_getLessobj');
     }
 
     public function getLessWrk(?array $filter): string
     {
-        return $this->getById('lesswrk', $filter, 'lw_id', 'ERROR_getlesswrk');
+        return $this->getById('LessWrk', $filter, 'lw_id', 'ERROR_getlesswrk');
     }
 
     /** id-only lookup: null filter -> all rows, {"id": ...} -> one row, anything else -> error. */

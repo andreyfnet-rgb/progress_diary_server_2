@@ -83,7 +83,9 @@ final class ProcEndService
                 $conditions[] = 'pb2_datoff IS NOT NULL';
             }
 
-            $completedSql = 'SELECT COUNT(*) AS n FROM figurles WHERE ' . implode(' AND ', $conditions);
+            // "Figurles" (capital F), matching the real CREATE VIEW casing
+            // -- see the case-sensitivity note in LvlStatService.
+            $completedSql = 'SELECT COUNT(*) AS n FROM Figurles WHERE ' . implode(' AND ', $conditions);
             $completed = (int) $this->db->query($completedSql, $params)[0]['n'];
 
             if ($total === 0) {

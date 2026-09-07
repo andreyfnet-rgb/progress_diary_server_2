@@ -51,11 +51,11 @@ final class LvlStatService
                 foreach ($levels as $level) {
                     $lvlId = (string) $level['lvl_id'];
                     $all = (int) $this->db->query(
-                        'SELECT COUNT(*) AS n FROM figurles WHERE dns_id = ? AND fgr_level = ? AND (pb2_idcln IS NULL OR cln_phone = ?)',
+                        'SELECT COUNT(*) AS n FROM Figurles WHERE dns_id = ? AND fgr_level = ? AND (pb2_idcln IS NULL OR cln_phone = ?)',
                         [$dnsId, $lvlId, $clnPhone]
                     )[0]['n'];
                     $done = (int) $this->db->query(
-                        'SELECT COUNT(*) AS n FROM figurles WHERE dns_id = ? AND fgr_level = ? AND pb2_datoff IS NOT NULL AND (pb2_idcln IS NULL OR cln_phone = ?)',
+                        'SELECT COUNT(*) AS n FROM Figurles WHERE dns_id = ? AND fgr_level = ? AND pb2_datoff IS NOT NULL AND (pb2_idcln IS NULL OR cln_phone = ?)',
                         [$dnsId, $lvlId, $clnPhone]
                     )[0]['n'];
 
