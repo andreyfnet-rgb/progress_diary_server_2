@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Gdpd\Domain;
 
+use Gdpd\Data\DelphiValueFormatter;
 use Gdpd\Data\Db;
 use Gdpd\Infrastructure\Logger;
 
@@ -46,15 +47,24 @@ final class CalendService
             $result = [];
             foreach ($rows as $row) {
                 $info = (string) ($row['pb1_aboutless'] ?? '');
+                // pb1_datles is a real DATETIME column -- PDO returns it as
+                // a raw "Y-m-d H:i:s" string, which must go through the
+                // same formatting every other date field in this API gets
+                // (dd.MM.yyyy, time omitted at exact midnight) since this
+                // endpoint builds its JSON by hand rather than via
+                // RowFormatter. Missing this was caught by diffing this
+                // endpoint's live output against the legacy server on a
+                // real client's lesson history.
+                $lessDate = $row['pb1_datles'] === null ? '' : DelphiValueFormatter::formatDateTime((string) $row['pb1_datles']);
                 $result[] = [
                     'name' => (string) ($row['dt_name'] ?? ''),
                     'lesstype' => (string) ($row['it_name'] ?? ''),
-                    'lessdate' => (string) ($row['pb1_datles'] ?? ''),
+                    'lessdate' => $lessDate,
                     'prepod' => (string) ($row['prp_name'] ?? ''),
                     'color' => (string) ($row['dt_color'] ?? ''),
                     'info' => $info,
                     'recom' => (string) ($row['pb1_recom'] ?? ''),
-                    'prgs_date_create' => (string) ($row['pb1_datles'] ?? ''),
+                    'prgs_date_create' => $lessDate,
                     'prp_name' => (string) ($row['prp_name'] ?? ''),
                     'it_name' => (string) ($row['it_name'] ?? ''),
                     'dns_name' => (string) ($row['dt_name'] ?? ''),

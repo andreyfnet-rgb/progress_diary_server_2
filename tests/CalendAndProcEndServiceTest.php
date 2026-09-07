@@ -53,6 +53,12 @@ return function (TestRunner $t): void {
         $t->assertSame('Calend Teacher', $row['prp_name']);
         $t->assertSame('#ff0000', $row['color']);
         $t->assertSame('Keep practicing', $row['recom']);
+        // Real bug caught by diffing live output against the legacy
+        // server: this endpoint builds JSON by hand (not via RowFormatter)
+        // and had briefly skipped date formatting, leaking MySQL's raw
+        // "Y-m-d H:i:s" shape instead of "dd.MM.yyyy H:mm:ss".
+        $t->assertSame('07.09.2026 18:00:00', $row['lessdate']);
+        $t->assertSame('07.09.2026 18:00:00', $row['prgs_date_create']);
     });
 
     $t->test('getCalend un-doubles a literal backslash-n into a JSON newline escape', function (TestRunner $t) use ($calend): void {
