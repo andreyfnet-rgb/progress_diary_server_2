@@ -98,8 +98,8 @@ final class SalaryService
     {
         $stavkaIds = array_map('trim', explode(',', $stavkaIdCsv));
         $placeholders = implode(', ', array_fill(0, count($stavkaIds), '?'));
-        $sweekno = $dateStv->format('W') . $dateStv->format('Y');
-        $pweekno = $datePok->format('W') . $datePok->format('Y');
+        $sweekno = self::weekYearKey($dateStv);
+        $pweekno = self::weekYearKey($datePok);
 
         $stavkaid = '';
         $wherein1c = '';
@@ -143,6 +143,18 @@ final class SalaryService
     private static function addField(string $field, string $addition): string
     {
         return $field === '' ? $addition : $field . ', ' . $addition;
+    }
+
+    /**
+     * Matches the original's IntToStr(WeekOfTheYear(d)) + IntToStr(YearOf(d))
+     * exactly: no leading zero on the week number ("92026", not "092026").
+     * PHP's date('W') always zero-pads to 2 digits, which silently failed
+     * to match anything for weeks 1-9 of any year until caught against
+     * real salary data for an early-year week.
+     */
+    private static function weekYearKey(\DateTimeImmutable $date): string
+    {
+        return ((int) $date->format('W')) . $date->format('Y');
     }
 
     private function mondayOfWeek(\DateTimeImmutable $date): \DateTimeImmutable

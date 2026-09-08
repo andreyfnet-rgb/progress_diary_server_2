@@ -54,7 +54,7 @@ CREATE TABLE stavka (
 -- Materialized snapshot of the wv_stpprep_week Access view's output.
 CREATE TABLE wv_stpprep_week (
     sweekno VARCHAR(20) NOT NULL,
-    phone VARCHAR(32) NOT NULL,
+    phone VARCHAR(32) NULL,
     stv_id INT NOT NULL,
     maxpok INT NULL,
     midpok INT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE wv_stpprep_week (
 -- Materialized snapshot of the wv_datein_group_week Access view's output.
 CREATE TABLE wv_datein_group_week (
     pweekno VARCHAR(20) NOT NULL,
-    phone VARCHAR(32) NOT NULL,
+    phone VARCHAR(32) NULL,
     id INT NOT NULL,
     spok INT NULL,
     KEY idx_week_phone_id (pweekno, phone, id)
