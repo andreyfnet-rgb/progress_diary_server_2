@@ -17,6 +17,7 @@ use Gdpd\Domain\Lookups\LookupService;
 use Gdpd\Domain\LvlStatService;
 use Gdpd\Domain\ProcEndService;
 use Gdpd\Domain\PurposeService;
+use Gdpd\Domain\SalaryActService;
 use Gdpd\Domain\SalaryService;
 use Gdpd\Infrastructure\Config;
 use Gdpd\Infrastructure\Logger;
@@ -52,6 +53,7 @@ $salaryDb = new Db(
     $config->get('salary_db', 'pass', '')
 );
 $salaryService = new SalaryService($salaryDb, $log);
+$salaryActService = new SalaryActService($salaryDb, $log);
 $inRecPdService = new InRecPdService($db, $schema, $log);
 $lvlStatService = new LvlStatService($db, $log);
 
@@ -68,6 +70,7 @@ Routes::register(
     $salaryService,
     $inRecPdService,
     $lvlStatService,
+    $salaryActService,
 );
 
 $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';

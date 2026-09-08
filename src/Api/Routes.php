@@ -13,6 +13,7 @@ use Gdpd\Domain\Lookups\LookupService;
 use Gdpd\Domain\LvlStatService;
 use Gdpd\Domain\ProcEndService;
 use Gdpd\Domain\PurposeService;
+use Gdpd\Domain\SalaryActService;
 use Gdpd\Domain\SalaryService;
 
 /**
@@ -73,6 +74,7 @@ final class Routes
         SalaryService $salaryService,
         InRecPdService $inRecPdService,
         LvlStatService $lvlStatService,
+        SalaryActService $salaryActService,
     ): void {
         $dispatcher->mapGet('getdattab', function (?array $jo) use ($genericTableService): string {
             $tab = (string) ($_GET['tab'] ?? '');
@@ -101,13 +103,6 @@ final class Routes
         $dispatcher->mapGet('inrecpd', fn(?array $jo): string => $inRecPdService->getInRecPd($jo));
         $dispatcher->mapPutObject('inrecpd', fn(?array $jo): string => $inRecPdService->putInRecPd($jo ?? []));
         $dispatcher->mapGet('lvlstat', fn(?array $jo): string => $lvlStatService->getLvlStat($jo));
-
-        // getactsal (and getdatashow0722, its complex salary-formula
-        // engine) is not ported -- no confirmed live consumer was found
-        // for it (see SalaryService's docblock), and it carries
-        // meaningfully higher risk to get right without a way to compare
-        // against the real old server's output on real salary data. Until
-        // then it falls through to Dispatcher's echo-the-body behaviour,
-        // same as an unmatched mtAny route in the original.
+        $dispatcher->mapGet('getactsal', fn(?array $jo): string => $salaryActService->getActSal($jo));
     }
 }

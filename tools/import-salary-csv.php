@@ -28,7 +28,7 @@ require __DIR__ . '/../src/autoload.php';
 use Gdpd\Infrastructure\Config;
 use Gdpd\Infrastructure\PhoneFormatting;
 
-$tables = ['wv_stpprep_week', 'wv_datein_group_week'];
+$tables = ['wv_stpprep_week', 'wv_datein_group_week', 'wv_prepod', 'wv_datain', 'wv_stvprep', 'stavka'];
 
 $csvDir = $argv[1] ?? null;
 if ($csvDir === null || !is_dir($csvDir)) {

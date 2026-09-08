@@ -72,3 +72,54 @@ CREATE TABLE wv_datein_group_week (
     spok DOUBLE NULL,
     KEY idx_week_phone_id (pweekno, phone, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- The three tables below feed get_act_sal/getdatashow0722 (SrvMetod.pas
+-- ~lines 1168/2586) -- the "Мой доход" mobile-app screen's real data
+-- source, ported after get_dat_sal above. Unlike wv_stpprep_week /
+-- wv_datein_group_week, these carry full row-level history (not a
+-- week-bucketed current snapshot) because getdatashow0722 filters by an
+-- explicit date range at query time, exactly like the Access views it
+-- reads from -- so the daily refresh here is a full copy of the source
+-- views, not a pre-aggregated slice. Only the columns getdatashow0722
+-- actually reads are kept (each of these views also joins in a full copy
+-- of prepod/stavka's own columns in Access, which are redundant here).
+
+-- Materialized snapshot of the wv_prepod Access view: one row per
+-- prepod/club membership.
+CREATE TABLE wv_prepod (
+    prepod_id INT NOT NULL,
+    phone VARCHAR(32) NULL,
+    nameprep VARCHAR(255) NULL,
+    namecat VARCHAR(255) NULL,
+    nameclb VARCHAR(255) NULL,
+    KEY idx_phone (phone)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Materialized snapshot of the wv_datain Access view: per-lesson/per-sale
+-- indicator rows (pok is genuinely a float -- Single in Access, confirmed
+-- against real data, e.g. 52457.27).
+CREATE TABLE wv_datain (
+    idprep INT NOT NULL,
+    idstv INT NOT NULL,
+    dataindo DATETIME NULL,
+    pok DOUBLE NULL,
+    sumplan TINYINT(1) NOT NULL DEFAULT 0,
+    KEY idx_prep_date (idprep, dataindo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Materialized snapshot of the wv_stvprep Access view: per-teacher/week
+-- rate ("stavka") rows, already joined with stavka's own mnojstv/trio/
+-- plan/raschet columns in the Access view itself.
+CREATE TABLE wv_stvprep (
+    idprep INT NOT NULL,
+    idstav INT NOT NULL,
+    datado DATETIME NULL,
+    minpok INT NULL,
+    midpok INT NULL,
+    maxpok INT NULL,
+    mnojstv VARCHAR(50) NULL,
+    trio TINYINT(1) NOT NULL DEFAULT 0,
+    plan INT NULL,
+    raschet TINYINT(1) NOT NULL DEFAULT 0,
+    KEY idx_prep_date (idprep, datado)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

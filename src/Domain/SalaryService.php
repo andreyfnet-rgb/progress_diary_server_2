@@ -22,12 +22,10 @@ use Gdpd\Infrastructure\PhoneFormatting;
  * are plain tables here (refreshed by a daily export from Access) instead
  * of reimplemented as MySQL views.
  *
- * get_act_sal / getdatashow0722 (the more involved salary computation with
- * dynamic VBScript-style formula evaluation) are NOT ported yet -- no
- * confirmed live consumer was found for them (galladance.com's proxy only
- * calls getdatsal), and they carry meaningfully higher risk to get right
- * without a way to compare against the real old server's output on real
- * salary data.
+ * get_act_sal / getdatashow0722 (the more involved salary computation,
+ * confirmed via a live A/B test to be the real data source for the mobile
+ * app's "Мой доход" screen) is ported separately in SalaryActService --
+ * see its docblock.
  */
 final class SalaryService
 {
