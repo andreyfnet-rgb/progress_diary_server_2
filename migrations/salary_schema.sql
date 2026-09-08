@@ -69,6 +69,6 @@ CREATE TABLE wv_datein_group_week (
     pweekno VARCHAR(20) NOT NULL,
     phone VARCHAR(32) NULL,
     id INT NOT NULL,
-    spok INT NULL,
+    spok DOUBLE NULL,
     KEY idx_week_phone_id (pweekno, phone, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
