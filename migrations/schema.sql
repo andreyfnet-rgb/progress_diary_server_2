@@ -236,7 +236,7 @@ CREATE TABLE schedule (
     shdl_nameless VARCHAR(255) NULL,
     shdl_nameroom VARCHAR(255) NULL,
     shdl_idprp INT NULL,
-    shdl_dtlesend INT NULL,
+    shdl_dtlesend INT NOT NULL DEFAULT 0,
     shdl_datecc DATETIME NULL,
     shdl_del TINYINT(1) NOT NULL DEFAULT 0,
     shdl_relocat TINYINT(1) NOT NULL DEFAULT 0,

@@ -148,9 +148,16 @@ final class Schedule1cSyncService
         );
 
         if (count($existing) === 0) {
+            // shdl_dtlesend=0 matches the real Access data's own convention
+            // for a freshly-scheduled, not-yet-taught lesson (see the same
+            // fix/comment in ScheduleDbfImportService::importRow) --
+            // without it, dp.galladance.com's own "list this teacher's
+            // pending lessons" query (pd.php, filters on shdl_dtlesend=0)
+            // never matches a NULL, so today's real lessons synced via 1C
+            // were silently invisible on the teacher's own page.
             $this->db->execute(
-                'INSERT INTO schedule (shdl_idcln, shdl_idclb, shdl_idprp, shdl_dtleson, shdl_dtlesoff, shdl_nameless, shdl_nameroom, shdl_del)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO schedule (shdl_idcln, shdl_idclb, shdl_idprp, shdl_dtleson, shdl_dtlesoff, shdl_nameless, shdl_nameroom, shdl_dtlesend, shdl_del)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)',
                 [$clnId, $clbId, $prpId, $dtLesOn, $dtLesOff, $lessonName, $roomName, $isCancelled ? 1 : 0]
             );
         } else {

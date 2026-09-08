@@ -134,9 +134,18 @@ final class ScheduleDbfImportService
         $isCancelledOrMoved = mb_stripos($statusName, 'тмен') !== false || mb_stripos($statusName, 'еренес') !== false;
 
         if (count($existing) === 0) {
+            // shdl_dtlesend=0 matches the real Access data's own convention
+            // for a freshly-scheduled, not-yet-taught lesson (every row
+            // from the original migration has 0/1/2, never NULL). Omitting
+            // it left new rows NULL, and dp.galladance.com's own
+            // "list this teacher's pending lessons" query (pd.php) filters
+            // on shdl_dtlesend=0 -- NULL never equals 0 in SQL, so today's
+            // real lessons were silently invisible there. Caught via a live
+            // test: a teacher's actual student list came back empty despite
+            // having lessons scheduled for today.
             $this->db->execute(
-                'INSERT INTO schedule (shdl_idcln, shdl_dtleson, shdl_dtlesoff, shdl_idclb, shdl_nameless, shdl_nameroom, shdl_idprp, shdl_del)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                'INSERT INTO schedule (shdl_idcln, shdl_dtleson, shdl_dtlesoff, shdl_idclb, shdl_nameless, shdl_nameroom, shdl_idprp, shdl_dtlesend, shdl_del)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)',
                 [$clnId, $dtLesOn, $dtLesOff, $club['clb_id'], $serviceName, (string) $row['CATEGORYNA'], $prpId, $isCancelledOrMoved ? 1 : 0]
             );
         } else {

@@ -67,6 +67,7 @@ return function (TestRunner $t): void {
         $t->assertSame('2026-09-10 18:00:00', (string) $rows[0]['shdl_dtleson']);
         $t->assertSame('2026-09-10 18:45:00', (string) $rows[0]['shdl_dtlesoff']);
         $t->assertSame(0, (int) $rows[0]['shdl_del']);
+        $t->assertSame(0, (int) $rows[0]['shdl_dtlesend'], 'new rows must start at 0 (not NULL), matching dp.galladance.com pd.php\'s own shdl_dtlesend=0 filter for pending lessons');
     });
 
     $t->test('re-processing the same item updates rather than duplicates, and detects cancellation', function (TestRunner $t) use ($service, $baseItem, $db): void {

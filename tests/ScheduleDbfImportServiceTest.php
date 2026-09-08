@@ -134,6 +134,7 @@ return function (TestRunner $t): void {
         $t->assertSame('2026-09-07 18:45:00', (string) $rows[0]['shdl_dtlesoff']);
         $t->assertSame('Individual lesson', $rows[0]['shdl_nameless']);
         $t->assertSame(0, (int) $rows[0]['shdl_del']);
+        $t->assertSame(0, (int) $rows[0]['shdl_dtlesend'], 'new rows must start at 0 (not NULL), matching dp.galladance.com pd.php\'s own shdl_dtlesend=0 filter for pending lessons');
 
         $t->assertSame(1, (int) $rows[1]['shdl_del'], 'the "Отменено клиентом" row should be marked cancelled');
 
