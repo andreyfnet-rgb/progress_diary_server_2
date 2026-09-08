@@ -10,7 +10,13 @@ declare(strict_types=1);
  * mtime hasn't changed since the last run, so frequent invocation is
  * cheap.
  *
- * Usage: php sync-schedule-dbf.php /path/to/import_dbf
+ * Usage: php sync-schedule-dbf.php [/path/to/import_dbf]
+ *
+ * The directory argument is optional -- defaults to <project root>/import_dbf.
+ * This is required for real deployment: the hosting's cron UI (Timeweb, at
+ * least) only lets you pick a PHP file to run, with no way to pass
+ * command-line arguments, so a cron job invoking this with no argument at
+ * all must still work.
  */
 
 if (PHP_SAPI !== 'cli') {
@@ -25,13 +31,13 @@ use Gdpd\Domain\ScheduleDbfImportService;
 use Gdpd\Infrastructure\Config;
 use Gdpd\Infrastructure\Logger;
 
-$importDir = $argv[1] ?? null;
-if ($importDir === null || !is_dir($importDir)) {
-    fwrite(STDERR, "Usage: php sync-schedule-dbf.php <import_dbf-directory>\n");
+$projectRoot = dirname(__DIR__);
+$importDir = $argv[1] ?? ($projectRoot . '/import_dbf');
+if (!is_dir($importDir)) {
+    fwrite(STDERR, "Usage: php sync-schedule-dbf.php [import_dbf-directory] (default: {$projectRoot}/import_dbf, which doesn't exist)\n");
     exit(1);
 }
 
-$projectRoot = dirname(__DIR__);
 $config = new Config($projectRoot . '/config.ini');
 $log = new Logger($projectRoot);
 
