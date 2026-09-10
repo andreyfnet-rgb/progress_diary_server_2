@@ -30,8 +30,12 @@ use Gdpd\Infrastructure\PhoneFormatting;
 
 $tables = ['wv_stpprep_week', 'wv_datein_group_week', 'wv_prepod', 'wv_datain', 'wv_stvprep', 'stavka'];
 
-$csvDir = $argv[1] ?? null;
-if ($csvDir === null || !is_dir($csvDir)) {
+// Defaults to <project root>/csv_import when no argument is given -- a
+// simple Timeweb cron job (just pick the PHP file, no way to pass CLI
+// arguments) would otherwise silently exit(1) on every single run, same
+// issue tools/sync-schedule-dbf.php had before its own default was added.
+$csvDir = $argv[1] ?? (dirname(__DIR__) . '/csv_import');
+if (!is_dir($csvDir)) {
     fwrite(STDERR, "Usage: php import-salary-csv.php <salary-csv-directory>\n");
     exit(1);
 }
