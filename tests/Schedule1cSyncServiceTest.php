@@ -148,7 +148,35 @@ return function (TestRunner $t): void {
         $t->assertSame('79007778802', $row[0]['cln_phone']);
     });
 
+    // --- a second 1C server (Екатеринбург/Пермь) -----------------------------
+    $t->test('ids from a second 1C server are kept apart from Moscow\'s by their prefix', function (TestRunner $t) use ($service, $db, $baseItem): void {
+        $db->execute('DELETE FROM schedule WHERE shdl_idclb IN (900070, 900071)');
+        $db->execute('DELETE FROM clubs WHERE clb_id = 900071');
+        $db->execute("DELETE FROM Client WHERE cln_id1c LIKE 'ekb:T1C9000%'");
+
+        // Same bare department and client ids as Moscow's test club/card,
+        // the way a separate 1C database numbers things.
+        $ekbItem = $baseItem([
+            'Client' => ['Id' => 'T1C9000A', 'Name' => 'Другой человек', 'Phone' => '79007778803'],
+            'Class' => array_replace($baseItem()['Class'], ['DateTime_Start' => '2026-10-18T10:00:00.000', 'DateTime_End' => '2026-10-18T10:45:00.000']),
+        ]);
+
+        $service->processItems([$ekbItem], 'ekb');
+        $t->assertSame(0, count($db->query('SELECT 1 FROM schedule WHERE shdl_idclb = 900070')), 'an ekb department must not land in Moscow\'s club with the same bare id');
+
+        $db->execute("INSERT INTO clubs (clb_id, clb_name, clb_id1c, clb_in1с) VALUES (900071, 'Ekb Test Club', 'ekb:DEP900070', 1)");
+        $service->processItems([$ekbItem], 'ekb');
+
+        $lesson = $db->query('SELECT shdl_idcln FROM schedule WHERE shdl_idclb = 900071');
+        $t->assertSame(1, count($lesson));
+        $client = $db->query('SELECT cln_id1c FROM Client WHERE cln_id = ?', [$lesson[0]['shdl_idcln']]);
+        $t->assertSame('ekb:T1C9000A', $client[0]['cln_id1c'], 'must be a separate client from Moscow\'s card T1C9000A');
+    });
+
     // --- cleanup ---------------------------------------------------------
+    $db->execute('DELETE FROM schedule WHERE shdl_idclb = 900071');
+    $db->execute('DELETE FROM clubs WHERE clb_id = 900071');
+    $db->execute("DELETE FROM Client WHERE cln_phone = '79007778803' OR cln_id1c LIKE 'ekb:T1C9000%'");
     $db->execute('DELETE FROM schedule WHERE shdl_idclb = 900070');
     $db->execute('DELETE FROM clubs WHERE clb_id = 900070');
     $db->execute("DELETE FROM prepod WHERE prp_phone = '79001112277'");

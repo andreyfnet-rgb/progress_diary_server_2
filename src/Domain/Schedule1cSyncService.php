@@ -30,6 +30,9 @@ final class Schedule1cSyncService
 {
     private const CANCELLED_STATUS = 'Отменено';
 
+    /** @var array<string, array{name: string, count: int}> */
+    private array $unknownDepartments = [];
+
     public function __construct(
         private readonly Db $db,
         private readonly Config $config,
@@ -37,21 +40,52 @@ final class Schedule1cSyncService
     ) {
     }
 
+    /**
+     * Every config section named [DBin] or [DBin_<suffix>] is one 1C Fitness
+     * server (Moscow, Екатеринбург, Пермь ...). Each is a separate 1C
+     * database with its own numbering, so ids from [DBin_<suffix>] are
+     * stored as "<prefix>:<id>" (prefix defaults to the lowercased suffix)
+     * -- otherwise Екатеринбург's department "000000001" would be read as
+     * Moscow's Жуковка, and two different people with the same 1C client
+     * number would merge. [DBin] keeps bare ids, as before. l/p fall back to
+     * [DBin]'s when a section leaves them out.
+     */
     public function sync(): void
     {
-        $url = $this->config->get('DBin', 'url');
-        if ($url === '') {
-            $this->log->log('shed_1c', 'ERROR: [DBin] url is not configured');
-            return;
+        $sources = 0;
+        foreach ($this->config->sectionNames() as $section) {
+            if ($section !== 'DBin' && !str_starts_with($section, 'DBin_')) {
+                continue;
+            }
+            $url = $this->config->get($section, 'url');
+            if ($url === '') {
+                continue;
+            }
+            $sources++;
+            $prefix = $section === 'DBin' ? '' : $this->config->get($section, 'prefix', strtolower(substr($section, 5)));
+            $this->syncSource(
+                $url,
+                $this->config->get($section, 'l', $this->config->get('DBin', 'l')),
+                $this->config->get($section, 'p', $this->config->get('DBin', 'p')),
+                $prefix
+            );
         }
 
+        if ($sources === 0) {
+            $this->log->log('shed_1c', 'ERROR: no [DBin] url is configured');
+        }
+    }
+
+    private function syncSource(string $url, string $login, string $password, string $source): void
+    {
+        $label = $source === '' ? '' : "[{$source}] ";
         $requestUrl = $url . 'ExportSchedule?Date=' . date('Ymd');
-        $this->log->log('shed_1c', 'GET URL: ' . $requestUrl);
+        $this->log->log('shed_1c', $label . 'GET URL: ' . $requestUrl);
 
         $ch = curl_init($requestUrl);
         curl_setopt_array($ch, [
             CURLOPT_HTTPGET => true,
-            CURLOPT_USERPWD => $this->config->get('DBin', 'l') . ':' . $this->config->get('DBin', 'p'),
+            CURLOPT_USERPWD => $login . ':' . $password,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT => 60,
         ]);
@@ -61,7 +95,7 @@ final class Schedule1cSyncService
         curl_close($ch);
 
         if ($response === false) {
-            $this->log->log('shed_1c', 'ERROR GET URL: ' . $error);
+            $this->log->log('shed_1c', $label . 'ERROR GET URL: ' . $error);
             return;
         }
 
@@ -82,29 +116,40 @@ final class Schedule1cSyncService
             // this (wrong credentials, an HTML error page, an unexpected 1C
             // response shape), so it's worth keeping around even though it's
             // not itself parseable JSON.
-            $this->log->log('shed_1c', "ERROR GET in STL: response is not a JSON array (HTTP {$httpStatus})");
-            $this->log->log('shed_1c_error_response', substr($body, 0, 4000));
+            $this->log->log('shed_1c', $label . "ERROR GET in STL: response is not a JSON array (HTTP {$httpStatus})");
+            $this->log->log('shed_1c_error_response', $label . substr($body, 0, 4000));
             return;
         }
 
-        $this->processItems($items);
-        $this->log->log('shed_1c', 'Успешная загрузка в ' . date('d.m.Y H:i:s'));
+        $this->processItems($items, $source);
+        $this->log->log('shed_1c', $label . 'Успешная загрузка в ' . date('d.m.Y H:i:s'));
     }
 
-    /** @param list<array<string, mixed>> $items */
-    public function processItems(array $items): void
+    /**
+     * @param list<array<string, mixed>> $items
+     * @param string $source id prefix of the 1C server these items came from ('' for [DBin])
+     */
+    public function processItems(array $items, string $source = ''): void
     {
+        $this->unknownDepartments = [];
         foreach ($items as $index => $item) {
             try {
-                $this->processItem($item);
+                $this->processItem($item, $source);
             } catch (\Throwable $e) {
                 $this->log->log('shed_1c', "ERROR PARSE[{$index}]: " . $e->getMessage());
             }
         }
+
+        // A club that 1C sends lessons for but that isn't linked yet is
+        // logged with the exact clb_id1c value to set -- that's how a newly
+        // connected server's department ids are found.
+        foreach ($this->unknownDepartments as $id => $info) {
+            $this->log->log('shed_1c', "Клуб 1С не подключён: clb_id1c='{$id}' ({$info['name']}), уроков пропущено: {$info['count']}");
+        }
     }
 
     /** @param array<string, mixed> $item */
-    private function processItem(array $item): void
+    private function processItem(array $item, string $source): void
     {
         $instructor = (array) ($item['Instructor'] ?? []);
         $client = (array) ($item['Client'] ?? []);
@@ -112,11 +157,18 @@ final class Schedule1cSyncService
         $department = (array) ($item['Department'] ?? []);
         $room = (array) ($item['Room'] ?? []);
 
-        if ($this->isExcluded('room_code', (string) ($room['Code'] ?? '')) || $this->isExcluded('class_code', (string) ($class['Code'] ?? ''))) {
+        if ($this->isExcluded('room_code', $this->scoped($source, (string) ($room['Code'] ?? '')))
+            || $this->isExcluded('class_code', $this->scoped($source, (string) ($class['Code'] ?? '')))) {
             return;
         }
 
-        $clbId = $this->findClubId((string) ($department['Id'] ?? ''));
+        $departmentId = $this->scoped($source, (string) ($department['Id'] ?? ''));
+        $clbId = $this->findClubId($departmentId);
+        if ($clbId === null && $departmentId !== '') {
+            $this->unknownDepartments[$departmentId] ??= ['name' => (string) ($department['Name'] ?? ''), 'count' => 0];
+            $this->unknownDepartments[$departmentId]['count']++;
+            return;
+        }
 
         $clnId = null;
         $clientPhone = (string) ($client['Phone'] ?? '');
@@ -124,7 +176,7 @@ final class Schedule1cSyncService
             $clnId = $this->findOrCreateClient(
                 explode(',', $clientPhone)[0],
                 (string) ($client['Name'] ?? ''),
-                trim((string) ($client['Id'] ?? ''))
+                $this->scoped($source, trim((string) ($client['Id'] ?? '')))
             );
         }
 
@@ -223,6 +275,11 @@ final class Schedule1cSyncService
         } catch (\Throwable $e) {
             $this->log->log('ERROR_chek_dell_add', $e->getMessage());
         }
+    }
+
+    private function scoped(string $source, string $id): string
+    {
+        return ($source === '' || $id === '') ? $id : $source . ':' . $id;
     }
 
     private function isExcluded(string $column, string $code): bool

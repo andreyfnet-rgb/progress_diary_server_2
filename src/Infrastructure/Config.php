@@ -27,4 +27,10 @@ final class Config
         $value = $this->sections[$section][$key] ?? null;
         return $value === null ? $default : (string) $value;
     }
+
+    /** @return list<string> */
+    public function sectionNames(): array
+    {
+        return array_map('strval', array_keys($this->sections));
+    }
 }
