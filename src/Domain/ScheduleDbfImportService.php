@@ -7,6 +7,7 @@ namespace Gdpd\Domain;
 use Gdpd\Data\Db;
 use Gdpd\Infrastructure\DbfReader;
 use Gdpd\Infrastructure\Logger;
+use Gdpd\Infrastructure\NameFormatting;
 use Gdpd\Infrastructure\RandomString;
 
 /**
@@ -210,7 +211,7 @@ final class ScheduleDbfImportService
         if (count($existing) === 0) {
             $this->db->execute(
                 'INSERT INTO Client (cln_name, cln_phone, cln_idfox, cln_info) VALUES (?, ?, ?, ?)',
-                [$name, $phone, $idFoxRaw, $now]
+                [NameFormatting::fromAllCaps($name), $phone, $idFoxRaw, $now]
             );
             return (string) $this->db->query('SELECT cln_id FROM Client WHERE cln_phone = ?', [$phone])[0]['cln_id'];
         }
