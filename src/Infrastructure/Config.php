@@ -18,8 +18,21 @@ final class Config
 
     public function __construct(string $path)
     {
-        $parsed = file_exists($path) ? parse_ini_file($path, true) : false;
-        $this->sections = $parsed !== false ? $parsed : [];
+        if (!file_exists($path)) {
+            $this->sections = [];
+            return;
+        }
+
+        // A file that exists but doesn't parse must fail loudly: falling
+        // back to empty settings made every page fail on a DB connect with
+        // no database name and no password, which says nothing about the
+        // real cause (an unquoted password containing ! ^ ~ & etc).
+        $parsed = @parse_ini_file($path, true);
+        if ($parsed === false) {
+            $reason = error_get_last()['message'] ?? 'unknown error';
+            throw new \RuntimeException("Cannot parse {$path}: {$reason}. Values with special characters must be in double quotes.");
+        }
+        $this->sections = $parsed;
     }
 
     public function get(string $section, string $key, string $default = ''): string
