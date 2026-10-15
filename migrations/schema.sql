@@ -38,7 +38,10 @@ CREATE TABLE Client (
     cln_idfox VARCHAR(255) NULL,
     cln_phone VARCHAR(255) NULL,
     cln_lvl VARCHAR(255) NULL,
-    cln_info VARCHAR(255) NULL
+    cln_info VARCHAR(255) NULL,
+    cln_id1c VARCHAR(32) NULL,
+    KEY idx_cln_phone (cln_phone),
+    KEY idx_cln_id1c (cln_id1c)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE clubs (

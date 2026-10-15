@@ -104,10 +104,55 @@ return function (TestRunner $t): void {
         $t->assertSame(1, count($rows), 'the second, valid item must still be processed');
     });
 
+    // --- matching on the 1C card Id ----------------------------------------
+    // Reproduces the real case: a legacy row created under one name, then
+    // 1C sending a different person's card with the same phone.
+    $sharedPhone = '79007778801';
+    $db->execute("DELETE FROM Client WHERE cln_phone IN ('79007778801', '79007778802') OR cln_id1c LIKE 'T1C9000%'");
+    $db->execute("INSERT INTO Client (cln_name, cln_phone) VALUES ('Кулакова Екатерина Петровна', ?)", [$sharedPhone]);
+    $legacyId = (string) $db->pdo()->lastInsertId();
+
+    $cardItem = static fn (string $id1c, string $name, string $phone, string $start = '2026-10-15T13:00:00.000') => $baseItem([
+        'Client' => ['Id' => $id1c, 'Name' => $name, 'Phone' => $phone],
+        'Class' => array_replace($baseItem()['Class'], ['DateTime_Start' => $start, 'DateTime_End' => substr($start, 0, 11) . '13:45:00.000']),
+    ]);
+
+    $t->test('the first 1C card on a legacy phone claims that row and takes its 1C name', function (TestRunner $t) use ($service, $db, $cardItem, $sharedPhone, $legacyId): void {
+        $service->processItems([$cardItem('T1C9000A', 'Архипова Александра Игоревна', $sharedPhone)]);
+
+        $rows = $db->query('SELECT cln_id, cln_name, cln_id1c FROM Client WHERE cln_phone = ?', [$sharedPhone]);
+        $t->assertSame(1, count($rows), 'must reuse the legacy row, not add a second client');
+        $t->assertSame($legacyId, (string) $rows[0]['cln_id']);
+        $t->assertSame('Архипова Александра Игоревна', $rows[0]['cln_name']);
+        $t->assertSame('T1C9000A', $rows[0]['cln_id1c']);
+    });
+
+    $t->test('a second 1C card with the same phone becomes its own client, with its own lessons', function (TestRunner $t) use ($service, $db, $cardItem, $sharedPhone, $legacyId): void {
+        $service->processItems([$cardItem('T1C9000B', 'Кулакова Екатерина Петровна', $sharedPhone, '2026-10-16T13:00:00.000')]);
+
+        $kulakova = $db->query("SELECT cln_id FROM Client WHERE cln_id1c = 'T1C9000B'");
+        $t->assertSame(1, count($kulakova));
+        $t->assertTrue((string) $kulakova[0]['cln_id'] !== $legacyId, 'must not reuse Архипова\'s row');
+
+        $lesson = $db->query("SELECT shdl_idcln FROM schedule WHERE shdl_idclb = 900070 AND shdl_dtleson = '2026-10-16 13:00:00'");
+        $t->assertSame((string) $kulakova[0]['cln_id'], (string) $lesson[0]['shdl_idcln']);
+
+        $archipova = $db->query('SELECT cln_name FROM Client WHERE cln_id = ?', [$legacyId]);
+        $t->assertSame('Архипова Александра Игоревна', $archipova[0]['cln_name'], 'the other card must not overwrite her name');
+    });
+
+    $t->test('a phone change in 1C is copied over when the new number is free', function (TestRunner $t) use ($service, $db, $cardItem): void {
+        $service->processItems([$cardItem('T1C9000B', 'Кулакова Екатерина Петровна', '79007778802', '2026-10-17T13:00:00.000')]);
+
+        $row = $db->query("SELECT cln_phone FROM Client WHERE cln_id1c = 'T1C9000B'");
+        $t->assertSame('79007778802', $row[0]['cln_phone']);
+    });
+
     // --- cleanup ---------------------------------------------------------
     $db->execute('DELETE FROM schedule WHERE shdl_idclb = 900070');
     $db->execute('DELETE FROM clubs WHERE clb_id = 900070');
     $db->execute("DELETE FROM prepod WHERE prp_phone = '79001112277'");
     $db->execute("DELETE FROM Client WHERE cln_phone = '79007778877'");
+    $db->execute("DELETE FROM Client WHERE cln_phone IN ('79007778801', '79007778802') OR cln_id1c LIKE 'T1C9000%'");
     $db->execute("DELETE FROM exclude_1c WHERE room_code = 'ROOM_EXCLUDED_900070'");
 };

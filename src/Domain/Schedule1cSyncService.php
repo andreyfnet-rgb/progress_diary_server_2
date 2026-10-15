@@ -121,7 +121,11 @@ final class Schedule1cSyncService
         $clnId = null;
         $clientPhone = (string) ($client['Phone'] ?? '');
         if ($clientPhone !== '') {
-            $clnId = $this->findOrCreateClient(explode(',', $clientPhone)[0], (string) ($client['Name'] ?? ''));
+            $clnId = $this->findOrCreateClient(
+                explode(',', $clientPhone)[0],
+                (string) ($client['Name'] ?? ''),
+                trim((string) ($client['Id'] ?? ''))
+            );
         }
 
         $prpId = null;
@@ -238,23 +242,88 @@ final class Schedule1cSyncService
         return count($rows) === 0 ? null : (string) $rows[0]['clb_id'];
     }
 
-    private function findOrCreateClient(string $phoneRaw, string $name): ?string
+    /**
+     * Matches on the client's 1C card Id when 1C sends one, so two 1C cards
+     * that share a phone (a data-entry mistake, or relatives) stay two
+     * clients here instead of one student's lessons showing under the
+     * other's name. 1C is the source of truth for a matched card: its name,
+     * and its phone when no other client already holds that number, are
+     * copied over on every sync.
+     *
+     * Rows created before cln_id1c existed are "claimed" by the first 1C
+     * card that arrives with their phone. Items with no Id fall back to the
+     * original phone-only match.
+     */
+    private function findOrCreateClient(string $phoneRaw, string $name, string $id1c): ?string
     {
         $phone = preg_replace('/\D/', '', $phoneRaw);
         if (strlen($phone) !== 11) {
             return null;
         }
+        $name = trim($name);
 
-        $existing = $this->db->query('SELECT cln_id FROM Client WHERE cln_phone = ?', [$phone]);
-        if (count($existing) === 0) {
-            $this->db->execute(
-                'INSERT INTO Client (cln_name, cln_phone, cln_info) VALUES (?, ?, ?)',
-                [$name, $phone, (new \DateTimeImmutable())->format('d.m.Y H:i:s')]
-            );
-            return (string) $this->db->query('SELECT cln_id FROM Client WHERE cln_phone = ?', [$phone])[0]['cln_id'];
+        if ($id1c === '') {
+            $existing = $this->db->query('SELECT cln_id FROM Client WHERE cln_phone = ? ORDER BY cln_id LIMIT 1', [$phone]);
+            return count($existing) > 0 ? (string) $existing[0]['cln_id'] : $this->insertClient($name, $phone, null);
         }
 
-        return (string) $existing[0]['cln_id'];
+        $byId = $this->db->query('SELECT cln_id, cln_name, cln_phone FROM Client WHERE cln_id1c = ? ORDER BY cln_id LIMIT 1', [$id1c]);
+        if (count($byId) > 0) {
+            $this->syncClientCard($byId[0], $name, $phone);
+            return (string) $byId[0]['cln_id'];
+        }
+
+        $unclaimed = $this->db->query(
+            "SELECT cln_id, cln_name, cln_phone FROM Client
+             WHERE cln_phone = ? AND (cln_id1c IS NULL OR cln_id1c = '')
+             ORDER BY cln_id LIMIT 1",
+            [$phone]
+        );
+        if (count($unclaimed) > 0) {
+            $this->db->execute('UPDATE Client SET cln_id1c = ? WHERE cln_id = ?', [$id1c, $unclaimed[0]['cln_id']]);
+            $this->syncClientCard($unclaimed[0], $name, $phone);
+            return (string) $unclaimed[0]['cln_id'];
+        }
+
+        $holder = $this->db->query('SELECT cln_id, cln_id1c FROM Client WHERE cln_phone = ? LIMIT 1', [$phone]);
+        if (count($holder) > 0) {
+            $this->log->log(
+                'shed_1c',
+                "Телефон {$phone} уже у клиента id={$holder[0]['cln_id']} (1С {$holder[0]['cln_id1c']}); "
+                . "для карточки 1С {$id1c} ({$name}) создан отдельный клиент"
+            );
+        }
+
+        return $this->insertClient($name, $phone, $id1c);
+    }
+
+    /** @param array{cln_id: mixed, cln_name: mixed, cln_phone: mixed} $row */
+    private function syncClientCard(array $row, string $name, string $phone): void
+    {
+        if ($name !== '' && $name !== (string) $row['cln_name']) {
+            $this->db->execute('UPDATE Client SET cln_name = ? WHERE cln_id = ?', [$name, $row['cln_id']]);
+        }
+
+        if ($phone !== (string) $row['cln_phone']) {
+            $taken = $this->db->query('SELECT cln_id FROM Client WHERE cln_phone = ? AND cln_id <> ? LIMIT 1', [$phone, $row['cln_id']]);
+            if (count($taken) === 0) {
+                $this->db->execute('UPDATE Client SET cln_phone = ? WHERE cln_id = ?', [$phone, $row['cln_id']]);
+            } else {
+                $this->log->log(
+                    'shed_1c',
+                    "Телефон клиента id={$row['cln_id']} в 1С сменился на {$phone}, но этот номер уже у клиента id={$taken[0]['cln_id']} -- оставлен старый"
+                );
+            }
+        }
+    }
+
+    private function insertClient(string $name, string $phone, ?string $id1c): string
+    {
+        $this->db->execute(
+            'INSERT INTO Client (cln_name, cln_phone, cln_info, cln_id1c) VALUES (?, ?, ?, ?)',
+            [$name, $phone, (new \DateTimeImmutable())->format('d.m.Y H:i:s'), $id1c]
+        );
+        return (string) $this->db->pdo()->lastInsertId();
     }
 
     private function findOrCreatePrepod(string $phoneRaw, string $name): ?string
